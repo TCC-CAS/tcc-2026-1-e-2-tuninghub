@@ -1,0 +1,47 @@
+import db from '../config/db.js';
+
+class OficinaRepository {
+  async findAll() {
+    const query = `
+      SELECT IdOficina, NomeOficina, CNPJ, NomeProprietario, Telefone, Email, Ativo, DataCriacao 
+      FROM Oficina 
+      WHERE Ativo = 1
+    `;
+    const [rows] = await db.execute(query);
+    return rows;
+  }
+
+  async findByEmail(email) {
+    const query = 'SELECT * FROM Oficina WHERE Email = ?';
+    const [rows] = await db.execute(query, [email]);
+    return rows[0];
+  }
+
+  async findByCnpj(cnpj) {
+    const query = 'SELECT * FROM Oficina WHERE CNPJ = ?';
+    const [rows] = await db.execute(query, [cnpj]);
+    return rows[0];
+  }
+
+  async create(dados) {
+    const { nomeOficina, cnpj, nomeProprietario, telefone, email, senhaHasheada } = dados;
+    
+    const query = `
+      INSERT INTO Oficina (NomeOficina, CNPJ, NomeProprietario, Telefone, Email, Senha) 
+      VALUES (?, ?, ?, ?, ?, ?)
+    `;
+    
+    const [result] = await db.execute(query, [
+      nomeOficina, 
+      cnpj, 
+      nomeProprietario || null, 
+      telefone || null, 
+      email, 
+      senhaHasheada
+    ]);
+    
+    return result.insertId;
+  }
+}
+
+export default new OficinaRepository();
