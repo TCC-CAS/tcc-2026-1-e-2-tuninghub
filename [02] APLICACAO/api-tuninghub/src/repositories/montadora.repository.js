@@ -3,7 +3,7 @@ import db from '../config/db.js';
 class MontadoraRepository {
     async findAll() {
         // Ordenamos alfabeticamente para facilitar a exibição no Front-end
-        const query = 'SELECT * FROM Montadora WHERE Ativo = 1 ORDER BY Nome ASC';
+        const query = 'SELECT * FROM Montadora ORDER BY Nome ASC';
         const [rows] = await db.execute(query);
         return rows;
     }
