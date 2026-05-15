@@ -1,26 +1,40 @@
-import AuthService from '../services/auth.service.js';
+import authService from '../services/auth.service.js';
 
 class AuthController {
-  async login(req, res, next) {
+  async login(req, res) {
     try {
-      const { email, senha } = req.body;
+      // 1. Extração de dados
+      const { email, senha, tipoConta } = req.body;
 
-      if (!email || !senha) {
-        return res.status(400).json({ status: 'error', message: 'E-mail e senha são obrigatórios.' });
+      // 2. Validação básica de entrada
+      if (!email || !senha || !tipoConta) {
+        return res.status(400).json({
+          erro: 'Os campos email, senha e tipoConta são obrigatórios.'
+        });
       }
 
-      const resultado = await AuthService.loginUsuario(email, senha);
+      // 3. Chamada à camada de serviço
+      const authData = await authService.autenticar(email, senha, tipoConta.toLowerCase());
 
-      res.status(200).json({
-        message: 'Login realizado com sucesso!',
-        data: resultado
+      // 4. Resposta de Sucesso
+      return res.status(200).json({
+        mensagem: 'Login realizado com sucesso.',
+        ...authData
       });
+
     } catch (error) {
-      // Se for o nosso erro de "E-mail ou senha inválidos", mandamos um 401 Unauthorized
-      if (error.message.includes('inválidos')) {
-        return res.status(401).json({ status: 'error', message: error.message });
+      // Tratamento de erros de negócio vs erros de sistema
+      if (error.message === 'CREDENCIAIS_INVALIDAS') {
+        return res.status(401).json({ erro: 'E-mail ou senha incorretos.' });
       }
-      next(error);
+
+      if (error.message === 'TIPO_CONTA_INVALIDO') {
+        return res.status(400).json({ erro: 'Tipo de conta inválido. Use: usuario, oficina ou admin.' });
+      }
+
+      // Para erros genéricos/sistema, registramos no console, mas não vazamos a stack pro usuário final
+      console.error('[AuthController] Erro no login:', error);
+      return res.status(500).json({ erro: 'Ocorreu um erro interno no servidor.' });
     }
   }
 }
