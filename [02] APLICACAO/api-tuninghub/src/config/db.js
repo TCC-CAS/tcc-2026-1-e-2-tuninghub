@@ -18,10 +18,10 @@ const pool = mysql.createPool({
 // Teste inicial rápido de conexão
 try {
   const connection = await pool.getConnection();
-  console.log('✅ Conectado ao banco de dados MySQL 8.0 com sucesso!');
+  console.log('Conectado ao banco de dados MySQL 8.0 com sucesso!');
   connection.release();
 } catch (error) {
-  console.error('❌ Erro ao conectar no banco de dados:', error.message);
+  console.error('Erro ao conectar no banco de dados:', error.message);
 }
 
 export default pool;

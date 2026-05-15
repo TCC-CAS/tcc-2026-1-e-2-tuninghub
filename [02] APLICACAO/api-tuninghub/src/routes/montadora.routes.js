@@ -4,10 +4,14 @@ import { verificarToken } from '../middlewares/auth.middleware.js';
 
 const router = Router();
 
-// Rota Pública: Clientes precisam ver a lista para cadastrar seus carros
+// Rota de busca (DEVE vir antes da rota /:id)
 router.get('/', MontadoraController.listar);
+router.get('/buscar', MontadoraController.buscarPorNome); // Exemplo de uso: GET /montadoras/buscar?nome=Chevrolet
+router.get('/:id', MontadoraController.buscarPorId);
 
-// Rota Protegida: Apenas usuários autenticados (Admins) adicionam novas montadoras
-router.post('/', verificarToken, MontadoraController.criar);
+// Rotas Protegidas
+router.post('/', verificarToken(['ADMIN']), MontadoraController.criar);
+router.put('/:id', verificarToken(['ADMIN']), MontadoraController.atualizar);
+router.delete('/:id', verificarToken(['ADMIN']), MontadoraController.deletar);
 
 export default router;
