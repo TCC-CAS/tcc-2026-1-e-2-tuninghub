@@ -45,6 +45,29 @@ class AdminController {
     }
   }
 
+  async listarDesativados(req, res, next) {
+    try {
+      const adminsInativos = await AdminService.listarAdminsDesativados();
+      return res.status(200).json(adminsInativos);
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  async buscarPorIdDesativado(req, res, next) {
+    try {
+      const { id } = req.params;
+      const adminInativo = await AdminService.buscarDesativadoPorId(id);
+
+      return res.status(200).json(adminInativo);
+    } catch (error) {
+      if (error.message.includes('não encontrado')) {
+        return res.status(404).json({ status: 'error', message: error.message });
+      }
+      return next(error);
+    }
+  }
+
   async softDelete(req, res, next) {
     try {
       const { id } = req.params;

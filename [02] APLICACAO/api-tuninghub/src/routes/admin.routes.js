@@ -9,6 +9,8 @@ router.use(verificarToken(['ADMIN']));
 
 router.get('/', AdminController.listar);
 router.get('/buscar', AdminController.buscarPorEmail); // Exemplo de uso: /admin/buscar?email=teste@tuninghub.com
+router.get('/desativados', AdminController.listarDesativados);
+router.get('/desativados/:id', AdminController.buscarPorIdDesativado);
 router.get('/:id', AdminController.buscarPorId);
 
 router.post('/', AdminController.criar);

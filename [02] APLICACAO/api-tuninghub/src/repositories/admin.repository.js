@@ -23,6 +23,16 @@ class AdminRepository {
     return rows[0];
   }
 
+  async findOnlyInactive() {
+    const query = `
+      SELECT IdAdmin, Nome, Email, NivelAcesso, Ativo, DataCriacao 
+      FROM Admin 
+      WHERE Ativo = 0
+    `;
+    const [rows] = await db.execute(query);
+    return rows;
+  }
+
   async findIncludingInactive(id) {
     const query = 'SELECT * FROM Admin WHERE IdAdmin = ?';
     const [rows] = await db.execute(query, [id]);

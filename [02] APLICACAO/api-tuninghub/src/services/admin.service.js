@@ -27,6 +27,24 @@ class AdminService {
     return adminSemSenha;
   }
 
+  async listarAdminsDesativados() {
+    return await AdminRepository.findOnlyInactive();
+  }
+
+  async buscarDesativadoPorId(id) {
+    // Reaproveitando o método que você compartilhou
+    const admin = await AdminRepository.findIncludingInactive(id);
+
+    // Se não existir ou se ele estiver ATIVO, não deve aparecer nesta rota de desativados
+    if (!admin || admin.Ativo === 1) {
+      throw new Error('Administrador desativado não encontrado.');
+    }
+
+    // Sanitização obrigatória de segurança: remove a senha
+    const { Senha, ...adminSemSenha } = admin;
+    return adminSemSenha;
+  }
+
   async softDeleteAdmin(id) {
     const admin = await AdminRepository.findById(id);
     if (!admin) return null; // Retorna nulo para indicar recurso inexistente
