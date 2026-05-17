@@ -14,6 +14,7 @@ router.get('/:id', AdminController.buscarPorId);
 router.post('/', AdminController.criar);
 router.put('/:id', AdminController.alterar);
 router.put('/alterarSenha/:id', AdminController.alterarSenha);
+router.patch('/:id/reativar', AdminController.reativar); // Reverte SoftDelete
 
 
 router.delete('/:id', AdminController.softDelete);

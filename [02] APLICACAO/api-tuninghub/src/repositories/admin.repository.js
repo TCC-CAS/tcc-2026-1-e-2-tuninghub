@@ -73,6 +73,12 @@ class AdminRepository {
     return result.affectedRows > 0;
   }
 
+  async reactivate(id) {
+    const query = 'UPDATE Admin SET Ativo = 1 WHERE IdAdmin = ?';
+    const [result] = await db.execute(query, [id]);
+    return result.affectedRows > 0;
+  }
+
 }
 
 export default new AdminRepository();

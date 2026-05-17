@@ -150,6 +150,29 @@ class AdminController {
     }
   }
 
+  async reativar(req, res, next) {
+    try {
+      const { id } = req.params;
+
+      const adminReativado = await AdminService.reativarAdmin(id);
+
+      return res.status(200).json({
+        message: 'Administrador reativado com sucesso!',
+        admin: adminReativado
+      });
+    } catch (error) {
+      if (error.message.includes('não encontrado')) {
+        return res.status(404).json({ status: 'error', message: error.message });
+      }
+
+      if (error.message.includes('já está ativo')) {
+        return res.status(400).json({ status: 'error', message: error.message });
+      }
+
+      return next(error);
+    }
+  }
+
 }
 
 export default new AdminController();

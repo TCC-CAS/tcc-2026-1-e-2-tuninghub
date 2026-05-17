@@ -160,6 +160,29 @@ class AdminService {
     return adminSemSenha;
   }
 
+  async reativarAdmin(id) {
+    // 1. Busca o admin ignorando o filtro de 'Ativo = 1'
+    const admin = await AdminRepository.findIncludingInactive(id);
+
+    // 2. Validações de existência e estado atual
+    if (!admin) {
+      throw new Error('Administrador não encontrado.');
+    }
+
+    if (admin.Ativo === 1) {
+      throw new Error('Este administrador já está ativo no sistema.');
+    }
+
+    // 3. Persiste a reativação
+    await AdminRepository.reactivate(id);
+
+    // 4. Retorna os dados atualizados e sanitizados
+    const adminReativado = await AdminRepository.findById(id);
+    const { Senha, ...adminSemSenha } = adminReativado;
+
+    return adminSemSenha;
+  }
+
 }
 
 export default new AdminService();
