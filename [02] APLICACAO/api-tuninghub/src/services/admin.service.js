@@ -6,6 +6,66 @@ class AdminService {
     return await AdminRepository.findAll();
   }
 
+  async buscarPorId(id) {
+    const admin = await AdminRepository.findById(id);
+    if (!admin) return null;
+
+    // Sanitarização: Remove a propriedade 'Senha' utilizando rest operator
+    const { Senha, ...adminSemSenha } = admin;
+    return adminSemSenha;
+  }
+
+  async buscarPorEmail(email) {
+    if (!email) {
+      throw new Error('O parâmetro e-mail é obrigatório para realizar a busca.');
+    }
+
+    const admin = await AdminRepository.findByEmail(email);
+    if (!admin) return null;
+
+    const { Senha, ...adminSemSenha } = admin;
+    return adminSemSenha;
+  }
+
+  async listarAdminsDesativados() {
+    return await AdminRepository.findOnlyInactive();
+  }
+
+  async buscarDesativadoPorId(id) {
+    // Reaproveitando o método que você compartilhou
+    const admin = await AdminRepository.findIncludingInactive(id);
+
+    // Se não existir ou se ele estiver ATIVO, não deve aparecer nesta rota de desativados
+    if (!admin || admin.Ativo === 1) {
+      throw new Error('Administrador desativado não encontrado.');
+    }
+
+    // Sanitização obrigatória de segurança: remove a senha
+    const { Senha, ...adminSemSenha } = admin;
+    return adminSemSenha;
+  }
+
+  async softDeleteAdmin(id) {
+    const admin = await AdminRepository.findById(id);
+    if (!admin) return null; // Retorna nulo para indicar recurso inexistente
+
+    await AdminRepository.softDelete(id);
+
+    // Remove a propriedade 'Senha' usando desestruturação (Rest Operator)
+    const { Senha, ...adminSemSenha } = admin;
+    return adminSemSenha;
+  }
+
+  async hardDeleteAdmin(id) {
+    const admin = await AdminRepository.findIncludingInactive(id);
+    if (!admin) return null;
+
+    await AdminRepository.hardDelete(id);
+
+    const { Senha, ...adminSemSenha } = admin;
+    return adminSemSenha;
+  }
+
   async criarAdmin(dados) {
     const { nome, email, senha, nivelAcesso } = dados;
 
@@ -33,6 +93,114 @@ class AdminService {
       nivelAcesso: nivelAcesso || 'PADRAO'
     };
   }
+
+  async alterarAdmin(id, dados) {
+    // 1. Bloqueio de campos não autorizados
+    const chavesRequisicao = Object.keys(dados).map(k => k.toLowerCase());
+
+    if (chavesRequisicao.includes('datacriacao')) {
+      throw new Error('O dado "DataCriacao" não pode ser alterado.');
+    }
+    if (chavesRequisicao.includes('ativo')) {
+      throw new Error('O método adequado para inativar um usuário é o de delete.');
+    }
+    if (chavesRequisicao.includes('senha')) {
+      throw new Error('A rota adequada para alteração de senha é POST /alterarSenha/:id');
+    }
+
+    // 2. Verificar se o Administrador existe
+    const adminExistente = await AdminRepository.findById(id);
+    if (!adminExistente) {
+      throw new Error('Administrador não encontrado.');
+    }
+
+    // NORMALIZAÇÃO: Captura os dados independente de terem sido enviados como 'Nome' ou 'nome'
+    const novoNome = dados.Nome || dados.nome;
+    const novoEmail = dados.Email || dados.email;
+    const novoNivelAcesso = dados.NivelAcesso || dados.nivelAcesso;
+
+    // 3. Validação de conflito de e-mail 
+    if (novoEmail && novoEmail !== adminExistente.Email) {
+      const emailEmUso = await AdminRepository.findByEmail(novoEmail);
+      if (emailEmUso) {
+        throw new Error('Este e-mail já está vinculado a outra conta administrativa.');
+      }
+    }
+
+    // 4. Mesclar dados: Se vier vazio na requisição, mantém o que já estava no banco
+    const dadosParaAtualizar = {
+      nome: novoNome || adminExistente.Nome,
+      email: novoEmail || adminExistente.Email,
+      nivelAcesso: novoNivelAcesso || adminExistente.NivelAcesso
+    };
+
+    // 5. Persistência
+    await AdminRepository.update(id, dadosParaAtualizar);
+
+    // 6. Retornar os dados atualizados (Sanitizando a Senha)
+    const adminAtualizado = await AdminRepository.findById(id);
+    const { Senha, ...adminSemSenha } = adminAtualizado;
+    return adminSemSenha;
+  }
+
+  async alterarSenhaAdmin(id, dados) {
+    // 1. Validar chaves enviadas no payload (ignorando Case Sensitivity)
+    const chavesRequisicao = Object.keys(dados).map(k => k.toLowerCase());
+
+    // Se houver alguma chave que NÃO seja 'senha', bloqueia
+    const possuiOutrosCampos = chavesRequisicao.some(chave => chave !== 'senha');
+
+    if (possuiOutrosCampos) {
+      throw new Error('A rota adequada para alteração de outros dados é PUT /:id');
+    }
+
+    const novaSenha = dados.Senha || dados.senha;
+    if (!novaSenha) {
+      throw new Error('O campo "Senha" é obrigatório.');
+    }
+
+    // 2. Verificar se o Administrador existe
+    const adminExistente = await AdminRepository.findById(id);
+    if (!adminExistente) {
+      throw new Error('Administrador não encontrado.');
+    }
+
+    // 3. Gerar Hash Seguro da Nova Senha
+    const saltRounds = 10;
+    const senhaHasheada = await bcrypt.hash(novaSenha, saltRounds);
+
+    // 4. Persistir a alteração
+    await AdminRepository.updatePassword(id, senhaHasheada);
+
+    // 5. Retornar os dados do admin sanitizados (Sem expor a Senha)
+    const adminAtualizado = await AdminRepository.findById(id);
+    const { Senha, ...adminSemSenha } = adminAtualizado;
+    return adminSemSenha;
+  }
+
+  async reativarAdmin(id) {
+    // 1. Busca o admin ignorando o filtro de 'Ativo = 1'
+    const admin = await AdminRepository.findIncludingInactive(id);
+
+    // 2. Validações de existência e estado atual
+    if (!admin) {
+      throw new Error('Administrador não encontrado.');
+    }
+
+    if (admin.Ativo === 1) {
+      throw new Error('Este administrador já está ativo no sistema.');
+    }
+
+    // 3. Persiste a reativação
+    await AdminRepository.reactivate(id);
+
+    // 4. Retorna os dados atualizados e sanitizados
+    const adminReativado = await AdminRepository.findById(id);
+    const { Senha, ...adminSemSenha } = adminReativado;
+
+    return adminSemSenha;
+  }
+
 }
 
 export default new AdminService();
